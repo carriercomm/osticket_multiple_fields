@@ -1,7 +1,18 @@
 <?php
-//This is the original tickets.inc.php file from /include/staff/tickets.inc.php
-//from the download of OsTicket 1.9.4
-//The only changes that have been made are these comments at the start.
+/* 
+ * Easy Custom Fields. OsTicket 1.9.4
+ * For Information See http://www.andrewbennett.com.au/?p=487
+ * tickets.inc.php file from /include/staff/tickets.inc.php
+ * 
+ * Instructions:
+ * 1) Copy this gist to a new tickets.inc.php
+ * 2) Fill out the field ID (which can be found via the database or via using Firebug/Web Inspector). See http://www.andrewbennett.com.au/?p=487 for more info.
+ * 3) Backup your current file /include/staff/tickets.inc.php
+ * 4) Upload your new tickets.inc.php to /include/staff/tickets.inc.php 
+ */
+$ab_list['field_id'] = "XX"; //ID from from _form_field table 
+$ab_list['heading'] = "XXXXXXX"; //Name displayed to front end users.
+
 if(!defined('OSTSCPINC') || !$thisstaff || !@$thisstaff->isStaff()) die('Access Denied');
 
 $qstr='&'; //Query string collector
@@ -168,7 +179,8 @@ if ($_REQUEST['advsid'] && isset($_SESSION['adv_'.$_REQUEST['advsid']])) {
 $sortOptions=array('date'=>'effective_date','ID'=>'ticket.`number`*1',
     'pri'=>'pri.priority_urgency','name'=>'user.name','subj'=>'cdata.subject',
     'status'=>'status.name','assignee'=>'assigned','staff'=>'staff',
-    'dept'=>'dept.dept_name');
+    'dept'=>'dept.dept_name',
+	'custom1'=>'Custom1'); //AB Added
 
 $orderWays=array('DESC'=>'DESC','ASC'=>'ASC');
 
@@ -253,7 +265,11 @@ $qselect.=' ,IF(ticket.duedate IS NULL,IF(sla.id IS NULL, NULL, DATE_ADD(ticket.
          .' ,ticket.created as ticket_created, CONCAT_WS(" ", staff.firstname, staff.lastname) as staff, team.name as team '
          .' ,IF(staff.staff_id IS NULL,team.name,CONCAT_WS(" ", staff.lastname, staff.firstname)) as assigned '
          .' ,IF(ptopic.topic_pid IS NULL, topic.topic, CONCAT_WS(" / ", ptopic.topic, topic.topic)) as helptopic '
-         .' ,cdata.priority as priority_id, cdata.subject, pri.priority_desc, pri.priority_color';
+         .' ,cdata.priority as priority_id, cdata.subject, pri.priority_desc, pri.priority_color'
+		 .' ,fentry_val.value as Custom1' //AB - Custom 1
+		 ;
+
+
 
 $qfrom.=' LEFT JOIN '.TICKET_LOCK_TABLE.' tlock ON (ticket.ticket_id=tlock.ticket_id AND tlock.expire>NOW()
                AND tlock.staff_id!='.db_input($thisstaff->getId()).') '
@@ -263,6 +279,7 @@ $qfrom.=' LEFT JOIN '.TICKET_LOCK_TABLE.' tlock ON (ticket.ticket_id=tlock.ticke
        .' LEFT JOIN '.TOPIC_TABLE.' topic ON (ticket.topic_id=topic.topic_id) '
        .' LEFT JOIN '.TOPIC_TABLE.' ptopic ON (ptopic.topic_id=topic.topic_pid) '
        .' LEFT JOIN '.TABLE_PREFIX.'ticket__cdata cdata ON (cdata.ticket_id = ticket.ticket_id) '
+       .' LEFT JOIN '.TABLE_PREFIX.'form_entry_values fentry_val ON (cdata.field_'.$ab_list["field_id"].' = fentry_val.entry_id) AND fentry_val.field_id = '.$ab_list["field_id"] //AB We need to link to the form values as of 1.9.4
        .' LEFT JOIN '.PRIORITY_TABLE.' pri ON (pri.priority_id = cdata.priority)';
 
 TicketForm::ensureDynamicDataView();
@@ -405,6 +422,11 @@ if ($results) {
                         title="<?php echo sprintf(__('Sort by %s %s'), __('Department'), __($negorder)); ?>"><?php echo __('Department');?></a></th>
             <?php
             } ?>
+            <!-- AB – Custom Col 1 -->
+            <th width="60" >
+            <a <?php echo $custom1_sort; ?> href="tickets.php?sort=custom1&order=<?php echo $negorder; ?><?php echo $qstr; ?>"
+            title="Sort By <?php echo $ab_list['heading']; ?> <?php echo $negorder; ?>"><?php echo $ab_list['heading']; ?></a></th>
+            <!-- AB – Custom Col 1 -->
         </tr>
      </thead>
      <tbody>
@@ -487,6 +509,9 @@ if ($results) {
                 }
                 ?>
                 <td nowrap>&nbsp;<?php echo $lc; ?></td>
+                <!-- AB – Custom Col 1 -->
+                <td nowrap>&nbsp;<?php echo $row['Custom1']; ?>&nbsp;</td>
+                <!-- AB – Custom Col 1 -->
             </tr>
             <?php
             } //end of while.
@@ -496,7 +521,7 @@ if ($results) {
     </tbody>
     <tfoot>
      <tr>
-        <td colspan="7">
+        <td colspan="8">
             <?php if($res && $num && $thisstaff->canManageTickets()){ ?>
             <?php echo __('Select');?>:&nbsp;
             <a id="selectAll" href="#ckb"><?php echo __('All');?></a>&nbsp;&nbsp;
