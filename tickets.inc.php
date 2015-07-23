@@ -10,7 +10,7 @@
  * 3) Backup your current file /include/staff/tickets.inc.php
  * 4) Upload your new tickets.inc.php to /include/staff/tickets.inc.php 
  */
-$ab_list['field_id'] = "XX"; //ID from from _form_field table 
+$ab_list['field_id']=implode(",", array('XX')); //ID from from _form_field table , now you can set a lot of fields
 $ab_list['heading'] = "XXXXXXX"; //Name displayed to front end users.
 
 if(!defined('OSTSCPINC') || !$thisstaff || !@$thisstaff->isStaff()) die('Access Denied');
@@ -129,6 +129,8 @@ if($staffId && ($staffId==$thisstaff->getId())) { //My tickets
         $showassigned=false; //Not showing Assigned To column since assigned tickets are not part of open queue
     }
 }
+
+$qwhere.=' AND field_id IN ('.$ab_list['field_id'].') ';
 
 //Search?? Somebody...get me some coffee
 $deep_search=false;
@@ -279,7 +281,8 @@ $qfrom.=' LEFT JOIN '.TICKET_LOCK_TABLE.' tlock ON (ticket.ticket_id=tlock.ticke
        .' LEFT JOIN '.TOPIC_TABLE.' topic ON (ticket.topic_id=topic.topic_id) '
        .' LEFT JOIN '.TOPIC_TABLE.' ptopic ON (ptopic.topic_id=topic.topic_pid) '
        .' LEFT JOIN '.TABLE_PREFIX.'ticket__cdata cdata ON (cdata.ticket_id = ticket.ticket_id) '
-       .' LEFT JOIN '.TABLE_PREFIX.'form_entry_values fentry_val ON (cdata.field_'.$ab_list["field_id"].' = fentry_val.entry_id) AND fentry_val.field_id = '.$ab_list["field_id"] //AB We need to link to the form values as of 1.9.4
+       .' LEFT JOIN '.TABLE_PREFIX.'form_entry fentry ON (fentry.object_id=ticket.ticket_id)'
+       .' LEFT JOIN '.TABLE_PREFIX.'form_entry_values fentry_val ON (fentry_val.entry_id = fentry.id)'
        .' LEFT JOIN '.PRIORITY_TABLE.' pri ON (pri.priority_id = cdata.priority)';
 
 TicketForm::ensureDynamicDataView();
